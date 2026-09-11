@@ -1,0 +1,2 @@
+fif,ansys,f0,duration_s,best_roll_deg,gof,pearson_r,amp_ratio,sigma_now_deg,sigma_full_deg,residual_over_noise,relative_to_first_deg
+data/chest_12s_new_raw.fif,data/J_2a_2b.npz,130.14249999999842,12.0,234.1709691251772,0.8584864605682788,0.8585270077389976,0.12907617324258386,0.049001352102342965,0.012652094708934672,194.6747861912786,0.0
