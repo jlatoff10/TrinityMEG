@@ -1,0 +1,138 @@
+$begin '$base_index$'
+  $begin 'properties'
+    all_levels=000000000000
+    time(year=000000002026, month=000000000009, day=000000000002, hour=000000000010, min=000000000001, sec=000000000041)
+    version=000000000000
+  $end 'properties'
+  $begin '$base_index$'
+    $index$(pos=000000003560, lin=000000000117, lvl=000000000000)
+  $end '$base_index$'
+$end '$base_index$'
+$begin 'SolutionBlock8'
+	SolutionName='AdaptivePass'
+	SolutionID=22
+	V=67
+	$begin 'States'
+		F(VID=25, Ver=67)
+	$end 'States'
+	$begin 'Definition'
+		SamplingInterpolation=false
+		Frequencies()
+		SolutionType=1
+		CenterFreq=0
+	$end 'Definition'
+	$begin 'NFSP'
+		$begin 'SubData'
+			ID=10
+			NFSP(VID=25, Ver=67, File='DV25_SOL22_NFSP10_V67.sd')
+		$end 'SubData'
+	$end 'NFSP'
+$end 'SolutionBlock8'
+$begin 'BlockMapName'
+	FileHeader='SolutionBlock1'
+	'SolutionKey(SimSetup=21, Instance=\'\', Solution=-3, VersionID=67)'='SolutionBlock11'
+	'SolutionKey(SimSetup=21, Instance=\'SetupDefinition\', Solution=-1, VersionID=67)'='SolutionBlock10'
+	'SolutionKey(SimSetup=21, Instance=\'SolutionDefinition\', Solution=22, VersionID=67)'='SolutionBlock8'
+	'SolutionKey(SimSetup=21, Instance=\'SolutionDefinition\', Solution=23, VersionID=67)'='SolutionBlock9'
+$end 'BlockMapName'
+$begin 'SolutionBlock9'
+	SolutionName='LastAdaptive'
+	SolutionID=23
+	V=67
+	$begin 'States'
+		F(VID=25, Ver=67)
+	$end 'States'
+	$begin 'Definition'
+		SamplingInterpolation=false
+		Frequencies()
+		SolutionType=1
+		CenterFreq=0
+	$end 'Definition'
+	$begin 'Fields'
+		IDDblMap(65, -1)
+		$begin 'DataMap'
+			VID=25
+			Ver=67
+			Field(DblID=65, Dir='DV25_SOL23_V67.Field65/')
+		$end 'DataMap'
+	$end 'Fields'
+$end 'SolutionBlock9'
+$begin 'SolutionBlock10'
+	SimSetupID=21
+	SimSetupName='Setup1'
+	VersionID=67
+	SolveSetupID=0
+	$begin 'CurrMeshes'
+		IDDblMap(63, -1)
+		$begin 'DataMap'
+			VID=25
+			Ver=67
+			M(DblID=63, Dir='DV25_S21_V67.cmesh63/')
+		$end 'DataMap'
+	$end 'CurrMeshes'
+	$begin 'LastPassNumbers'
+		LP(VID=25, Ver=67, P=10)
+	$end 'LastPassNumbers'
+	$begin 'Profiles'
+		P(VID=25, Ver=67, File='DV25_S21_V67.profile')
+	$end 'Profiles'
+	$begin 'MI'
+		$begin 'SubData'
+			ID=0
+			MI(VID=25, Ver=67, Dir='DV25_S21_MI0_V67.sd/')
+		$end 'SubData'
+	$end 'MI'
+$end 'SolutionBlock10'
+$begin 'SolutionBlock1'
+	ProductName=''
+	CircuitName='Maxwell3DDesign1'
+	VersionID=67
+	PostProcess=false
+	LossLess=true
+	NextUniqueID=107
+	MoveBackwards=false
+	$begin 'VariationIDs'
+		Map(V='', ID=25)
+	$end 'VariationIDs'
+	$begin 'LinkedDataList'
+	$end 'LinkedDataList'
+	$begin 'InitialMeshes'
+		M(VID=25, Ver=67, Dir='DV25_V67.imesh/')
+	$end 'InitialMeshes'
+	$begin 'MI'
+		$begin 'SubData'
+			ID=0
+			MI(VID=25, Ver=67, Dir='DV25_MI0_V67.sd/')
+		$end 'SubData'
+	$end 'MI'
+$end 'SolutionBlock1'
+$begin 'SolutionBlock11'
+	ConvSetupName='dcconduction'
+	MaxPasses='10'
+	MinPasses='2'
+	ConvTarget='(1, 1)'
+	ConvTargetConsecPasses='N/A'
+	ConvCurrentConsecPasses='N/A'
+	c(tl=0, de_ee='(N/A, N/A)', le=104.1179725968069, p=1, tet=1796)
+	c(tl=0, de_ee='(N/A, N/A)', le=95.1527466486538, p=2, tet=1981)
+	c(tl=0, de_ee='(N/A, N/A)', le=88.3861289560797, p=3, tet=2179)
+	c(tl=0, de_ee='(N/A, N/A)', le=78.21245051454135, p=4, tet=2400)
+	c(tl=0, de_ee='(N/A, N/A)', le=77.0604232755955, p=5, tet=2664)
+	c(tl=0, de_ee='(N/A, N/A)', le=70.51134285346819, p=6, tet=2928)
+	c(tl=0, de_ee='(N/A, N/A)', le=65.65456386093986, p=7, tet=3221)
+	c(tl=0, de_ee='(N/A, N/A)', le=65.60058818136855, p=8, tet=3559)
+	c(tl=0, de_ee='(N/A, N/A)', le=65.22321794608932, p=9, tet=3947)
+	c(tl=0, de_ee='(N/A, N/A)', le=47.63063705836129, p=10, tet=4371)
+$end 'SolutionBlock11'
+$begin '$index$'
+	$begin '$index$'
+		SolutionBlock11(pos=2711, lin=99, lvl=0)
+		SolutionBlock8(pos=370, lin=1, lvl=0)
+		BlockMapName(pos=766, lin=21, lvl=0)
+		SolutionBlock9(pos=1238, lin=28, lvl=0)
+		SolutionBlock10(pos=1661, lin=50, lvl=0)
+		SolutionBlock1(pos=2216, lin=76, lvl=0)
+		$base_index$(pos=0, lin=1, lvl=0)
+		$index$(pos=3560, lin=117, lvl=0)
+	$end '$index$'
+$end '$index$'

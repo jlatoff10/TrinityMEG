@@ -1,0 +1,73 @@
+problem 1
+p 0
+attrib
+
+attribute 3
+a 1 623 SplitLine2 0 0 0 0
+local_cs
+  b_origin
+  x    0.00000000000000e+00 y    0.00000000000000e+00 z    0.00000000000000e+00
+  b_new_x
+  x    1.00000000000000e+00 y    0.00000000000000e+00 z    0.00000000000000e+00
+  b_new_y
+  x    0.00000000000000e+00 y    1.00000000000000e+00 z    0.00000000000000e+00
+  b_type CARTESIAN
+epsi
+v   1.00000000000000e+00 v   1.00000000000000e+00 v   1.00000000000000e+00
+cond
+v   0.00000000000000e+00 v   0.00000000000000e+00 v   0.00000000000000e+00
+excitation none 
+v 0
+a 2 997 NONE 1 0 0 0
+local_cs
+  b_origin
+  x    0.00000000000000e+00 y    0.00000000000000e+00 z    0.00000000000000e+00
+  b_new_x
+  x    1.00000000000000e+00 y    0.00000000000000e+00 z    0.00000000000000e+00
+  b_new_y
+  x    0.00000000000000e+00 y    1.00000000000000e+00 z    0.00000000000000e+00
+  b_type CARTESIAN
+epsi
+v   1.00000000000000e+00 v   1.00000000000000e+00 v   1.00000000000000e+00
+cond
+v   1.50000000000000e+00 v   1.50000000000000e+00 v   1.50000000000000e+00
+excitation none 
+v 0
+a 3 0 background 0 0 0 0
+local_cs
+  b_origin
+  x    0.00000000000000e+00 y    0.00000000000000e+00 z    0.00000000000000e+00
+  b_new_x
+  x    1.00000000000000e+00 y    0.00000000000000e+00 z    0.00000000000000e+00
+  b_new_y
+  x    0.00000000000000e+00 y    1.00000000000000e+00 z    0.00000000000000e+00
+  b_type CARTESIAN
+epsi
+v   1.00000000000000e+00 v   1.00000000000000e+00 v   1.00000000000000e+00
+cond
+v   0.00000000000000e+00 v   0.00000000000000e+00 v   0.00000000000000e+00
+excitation none 
+v 0
+end_attribute
+
+bound_types
+bound_type 3
+b 1 neuman mult neumann 1 
+b 2 Voltage1  mult voltage v   0.00000000000000e+00  1.00000000000000e+00
+b 3 Voltage2  mult voltage v   1.00000000000000e+00  1.00000000000000e+00
+end_bound_type
+
+bound_opers
+bound_ops      3
+b_op_init
+b_op_face Voltage1 1009 1
+b_op_face Voltage2 1046 1
+end_bound_ops
+
+end_bound_info
+
+thresholds
+perfect_conductor 1.00000000000000e+11
+perfect_insulator 1.00000000000000e+00
+end_thresholds
+end_problem

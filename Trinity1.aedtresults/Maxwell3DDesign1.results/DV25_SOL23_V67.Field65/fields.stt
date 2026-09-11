@@ -1,0 +1,5 @@
+minimum_dimension 1.21621939151999e-09
+residual -1.00000000000000e+00
+percent_refinement 1.00000000000000e+01
+skip_mesh_check N
+nonlinear_residual 1.00000000000000e-03
