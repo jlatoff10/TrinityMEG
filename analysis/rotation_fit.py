@@ -98,6 +98,7 @@ def main():
     ap.add_argument('--fif', nargs='+', required=True); ap.add_argument('--ansys', nargs='+', required=True)
     ap.add_argument('--tip', nargs=3, type=float, default=TIP_HEAD, help='electrode tip, head coords (m)')
     ap.add_argument('--fiducials-ansys', nargs=9, type=float, help='LPA NAS RPA in the Ansys frame (m): exact transform')
+    ap.add_argument('--exact', action='store_true', help='Ansys origin = fiducial midpoint and axes as in the convention: place the model by the transform alone, ignore --tip')
     ap.add_argument('--current', type=float, default=7.5e-3, help='stimulation current (A)')
     ap.add_argument('--f0', type=float, default=130.0); ap.add_argument('--roll-step', type=float, default=5.0)
     ap.add_argument('--grads', action='store_true', help='also use the 204 planar gradiometers')
@@ -110,6 +111,8 @@ def main():
     tip_head = np.array(a.tip)
     if a.fiducials_ansys:
         f = np.array(a.fiducials_ansys).reshape(3, 3); R_ah, t_ah = head_frame_from_fiducials(*f); place_by_tip = False
+    elif a.exact:
+        R_ah, t_ah = R_NOMINAL, np.zeros(3); place_by_tip = False
     else:
         R_ah, t_ah = R_FIT, None; place_by_tip = True
     shaft_head = R_ah @ AXIS_ANSYS; shaft_head /= np.linalg.norm(shaft_head)
