@@ -27,11 +27,11 @@ from dbs_period_average import period_average
 mne.set_log_level('ERROR')
 MU0_4PI = 1e-7
 TIP_HEAD = np.array([-0.03403, -0.04753, -0.08755])   # electrode tip, head coordinates (m)
-AXIS_ANSYS = np.array([0., 1., 0.])                    # shaft direction in the Ansys frame (tip -> lid)
-# Ansys -> head rotation fitted to the 4 mA chest recording (2a-3a). Replace by --fiducials-ansys when known.
-R_FIT = np.array([[ 0.474464, -0.00193 , -0.880273],
- [ 0.867049, -0.171673,  0.467712],
- [-0.152022, -0.985152, -0.079779]])
+AXIS_ANSYS = np.array([0., 1., 0.])                    # shaft direction in the Ansys frame (tip -> lid, toward the apex)
+# Ansys -> head rotation from the model's axis convention: Ansys +x = posterior (head -y), Ansys +y = apex
+# (head +z), Ansys +z = left ear (head -x). Exact up to the bucket's tilt; use --fiducials-ansys for the exact transform.
+R_NOMINAL = np.array([[0., 0., -1.], [-1., 0., 0.], [0., 1., 0.]])
+R_FIT = R_NOMINAL
 PLANAR_BASELINE = 0.0168                               # Neuromag planar gradiometer baseline (m)
 
 
