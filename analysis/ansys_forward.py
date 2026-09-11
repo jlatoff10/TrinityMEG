@@ -1,4 +1,7 @@
-"""Biot-Savart field of an Ansys Maxwell current export at the MEG magnetometers.
+"""SUPERSEDED by rotation_fit.py. Built around data/J_2a_3a.npz, whose lead position is wrong (confirmed), and a
+fitted Ansys->head rotation that turned out upside down. Kept only for the record of the first comparison.
+
+Biot-Savart field of an Ansys Maxwell current export at the MEG magnetometers.
 
 Usage:  python analysis/ansys_forward.py data/J_2a_3a.npz out_chest.npz
 
