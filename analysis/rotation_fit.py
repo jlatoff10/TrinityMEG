@@ -29,9 +29,9 @@ MU0_4PI = 1e-7
 TIP_HEAD = np.array([-0.03403, -0.04753, -0.08755])   # electrode tip, head coordinates (m)
 AXIS_ANSYS = np.array([0., 1., 0.])                    # shaft direction in the Ansys frame (tip -> lid)
 # Ansys -> head rotation fitted to the 4 mA chest recording (2a-3a). Replace by --fiducials-ansys when known.
-R_FIT = np.array([[-0.104932, -0.001997, -0.994477],
-                  [ 0.977641,  0.183129, -0.103516],
-                  [ 0.182324, -0.983089,  0.017304]])
+R_FIT = np.array([[ 0.474464, -0.00193 , -0.880273],
+ [ 0.867049, -0.171673,  0.467712],
+ [-0.152022, -0.985152, -0.079779]])
 PLANAR_BASELINE = 0.0168                               # Neuromag planar gradiometer baseline (m)
 
 
