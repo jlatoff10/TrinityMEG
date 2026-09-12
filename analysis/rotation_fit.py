@@ -19,7 +19,7 @@ Outputs (in --out, default analysis/results): <fif>_<ansys>_roll.png, rotation_r
 the per-sensor maps in <fif>_<ansys>.npz. With several fifs the CSV also lists rotations relative
 to the first file, which cancels any constant offset in the roll convention.
 """
-import argparse, os, sys, csv, numpy as np, mne
+import argparse, os, re, sys, csv, numpy as np, mne
 from scipy.spatial.transform import Rotation as Rot
 from scipy.ndimage import maximum_filter
 sys.path.insert(0, os.path.dirname(__file__))
@@ -106,6 +106,9 @@ def main():
     ap.add_argument('--weighted', action='store_true', help='whiten channels by their split-half noise before the fit')
     ap.add_argument('--stat', choices=['pearson', 'cosine'], default='pearson', help='pearson: mean removed (robust to a uniform offset); cosine: Yalaz-style, no mean removal')
     ap.add_argument('--full-duration', type=float, default=180.0, help='seconds, for the SNR extrapolation')
+    ap.add_argument('--i-sim', type=float, help='current between the contacts in the Ansys solve (A, from the Maxwell terminal); overrides the estimate')
+    ap.add_argument('--family', action='store_true', help='the exports are true rotations of the lead (angle parsed from the file name, e.g. r45_...): compare each recording with every export, refine each with a small numerical roll of +/- --window deg, report the best export and the refined absolute angle')
+    ap.add_argument('--window', type=float, default=15.0, help='family mode: numerical roll refinement half-width (deg)')
     ap.add_argument('--out', default='analysis/results')
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     tip_head = np.array(a.tip)
@@ -116,14 +119,16 @@ def main():
     else:
         R_ah, t_ah = R_FIT, None; place_by_tip = True
     shaft_head = R_ah @ AXIS_ANSYS; shaft_head /= np.linalg.norm(shaft_head)
-    rolls = np.arange(0, 360, a.roll_step)
+    rolls = np.arange(-a.window, a.window + 1e-9, a.roll_step) if a.family else np.arange(0, 360, a.roll_step)
     rows = []
     for npz in a.ansys:
         G, Q, contacts, Qnet, I_sim = load_ansys(npz)
         tip_ans = contacts if place_by_tip else None      # tip offset (<4 mm along the shaft) is irrelevant for the roll
         print(f'[{os.path.basename(npz)}] contacts at {np.round(contacts * 1e3, 1)} mm (Ansys), I_sim = {I_sim * 1e3:.2f} mA at 1 V, '
               f'net dipole dir {np.round(Qnet / np.linalg.norm(Qnet), 2)}')
+        if a.i_sim: I_sim = a.i_sim
         scale = a.current / I_sim
+        nominal = float(re.search(r'r(\d+)', os.path.basename(npz)).group(1)) if a.family and re.search(r'r(\d+)', os.path.basename(npz)) else 0.0
         for fif in a.fif:
             raw = mne.io.read_raw_fif(fif, preload=False); info = raw.info
             f0, tau, W, pk = period_average(raw, a.f0)
@@ -170,10 +175,11 @@ def main():
             dur = raw.times[-1]; sig_full = sig_theta * np.sqrt(dur / a.full_duration)
             resid = b - amp * mb; chi = np.sqrt(np.mean((resid / sigma) ** 2)); pear = np.corrcoef(mb, b)[0, 1]
             tag = f'{os.path.splitext(os.path.basename(fif))[0]}_{os.path.splitext(os.path.basename(npz))[0]}'
+            absolute = (nominal + best) % 360 if a.family else best
             print(f'[{tag}] f0 {f0:.4f} Hz, {len(chans)} ch, {dur:.0f} s | best roll {best:.1f} deg, corr {corr[ib]:.3f}, '
-                  f'({a.stat}; the other statistic peaks at {other:.0f} deg), Pearson r {pear:.3f}, amp ratio {amp:.2f} | noise-limited sigma {sig_theta:.2f} deg now, {sig_full:.2f} deg at {a.full_duration:.0f} s | '
+                  f'({a.stat}; the other statistic peaks at {other:.0f} deg)' + (f', export nominal {nominal:.0f} deg -> absolute {absolute:.1f} deg, corr at zero roll {corr[np.argmin(np.abs(rolls))]:.3f}' if a.family else '') + f', Pearson r {pear:.3f}, amp ratio {amp:.2f} | noise-limited sigma {sig_theta:.2f} deg now, {sig_full:.2f} deg at {a.full_duration:.0f} s | '
                   f'residual/noise {chi:.0f}x (systematic mismatch dominates when >> 1)')
-            rows.append(dict(fif=fif, ansys=npz, f0=f0, duration_s=dur, best_roll_deg=best, gof=corr[ib], pearson_r=pear, amp_ratio=amp,
+            rows.append(dict(fif=fif, ansys=npz, nominal_deg=nominal, absolute_deg=absolute, f0=f0, duration_s=dur, best_roll_deg=best, gof=corr[ib], pearson_r=pear, amp_ratio=amp,
                              sigma_now_deg=sig_theta, sigma_full_deg=sig_full, residual_over_noise=chi))
             np.savez(os.path.join(a.out, tag + '.npz'), rolls=rolls, corr=corr, measured=b, model=amp * mb, sigma=sigma,
                      chans=np.array(raw.ch_names)[chans], best_roll=best)
@@ -184,6 +190,12 @@ def main():
                 fig.tight_layout(); fig.savefig(os.path.join(a.out, tag + '_roll.png'), dpi=130); plt.close(fig)
             except Exception as e:
                 print('plot skipped:', e)
+    if a.family:
+        print('--- family summary (best export per recording) ---')
+        for fif in a.fif:
+            rr = sorted([r for r in rows if r['fif'] == fif], key=lambda r: -r['gof'])
+            print(f"{os.path.basename(fif)}: best {os.path.basename(rr[0]['ansys'])} (gof {rr[0]['gof']:.3f}) -> angle {rr[0]['absolute_deg']:.1f} deg; "
+                  + 'ranking: ' + ', '.join(f"r{r['nominal_deg']:.0f}:{r['gof']:.3f}" for r in rr))
     with open(os.path.join(a.out, 'rotation_results.csv'), 'w', newline='') as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()) + ['relative_to_first_deg']); w.writeheader()
         for npz in a.ansys:
