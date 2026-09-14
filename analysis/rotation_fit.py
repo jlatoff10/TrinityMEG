@@ -3,15 +3,15 @@
 Pipeline (per recording, each with its own dev_head_t from the fif header):
   1. period-locked average of the stimulation pulse (exact stimulation period, no peak detection)
   2. signed peak per magnetometer -> measured map
-  3. Ansys current export placed in head coordinates: located by the electrode tip, oriented by the
-     Ansys->head rotation (exact if you give the fiducials in the Ansys/CT frame, otherwise the
-     fitted rotation), then rotated about the shaft in steps of --roll-step
+  3. Ansys current export placed in head coordinates by the Ansys->head transform (--exact, recommended:
+     the model origin is the fiducial midpoint, so no tip input is needed), or by an electrode tip
+     position (--tip), then rotated about the shaft in steps of --roll-step
   4. correlation of the model map with the measured map at each roll; best roll, its noise-limited
      uncertainty, and the same uncertainty extrapolated to --full-duration seconds
 
 Examples
-  python analysis/rotation_fit.py --fif data/chest_12s_new_raw.fif --ansys data/J_2a_2b.npz
-  python analysis/rotation_fit.py --fif r0.fif r11.fif r45.fif --ansys data/J_2a_2b.npz --full-duration 180
+  python analysis/rotation_fit.py --fif r0.fif r11.fif r45.fif --ansys data/r0_ansys.fld_compressed.npz --exact --i-sim <A>
+  python analysis/rotation_fit.py --fif r0.fif --ansys data/r*_ansys.fld_compressed.npz --exact --family --i-sim <A>
   python analysis/rotation_fit.py --fif r0.fif --ansys data/J_2a_2b.npz \
         --fiducials-ansys LPAx LPAy LPAz NASx NASy NASz RPAx RPAy RPAz     (metres, Ansys frame)
 
@@ -28,9 +28,10 @@ mne.set_log_level('ERROR')
 MU0_4PI = 1e-7
 TIP_HEAD = np.array([-0.03403, -0.04753, -0.08755])   # electrode tip, head coordinates (m)
 AXIS_ANSYS = np.array([0., 1., 0.])                    # shaft direction in the Ansys frame (tip -> lid, toward the apex)
-# Ansys -> head rotation from the model's axis convention: Ansys +x = posterior (head -y), Ansys +y = apex
-# (head +z), Ansys +z = left ear (head -x). Exact up to the bucket's tilt; use --fiducials-ansys for the exact transform.
-R_NOMINAL = np.array([[0., 0., -1.], [-1., 0., 0.], [0., 1., 0.]])
+# Ansys -> head rotation. The Ansys model's origin is the LPA-RPA midpoint and its x-z plane is the fiducial plane;
+# its axes are +x toward the left ear (head -x), +y toward the apex (head +z), +z toward the nose (head +y).
+# Verified: the r0 export's contacts at Ansys (3, -41, -63) mm map to head (-3, -63, -41) mm, the SolidWorks tip.
+R_NOMINAL = np.array([[-1., 0., 0.], [0., 0., 1.], [0., 1., 0.]])
 R_FIT = R_NOMINAL
 PLANAR_BASELINE = 0.0168                               # Neuromag planar gradiometer baseline (m)
 

@@ -8,7 +8,7 @@
 - `fit_2a2b_roll_scan.py`, `ansys_forward.py` – earlier one-off comparisons, superseded.
 
 Data notes
-- `data/J_2a_2b.npz` is the valid current export (lead at (71, -36, 21) mm in the Ansys frame).
+- `data/r0_ansys.fld_compressed.npz` ... `r90_...` are the valid exports (corrected geometry, true lead rotations; contacts at Ansys (3, -41, -63) mm = head (-3, -63, -41) mm). `J_2a_2b.npz` is the earlier geometry.
 - `data/J_2a_3a.npz` has the lead in the wrong place (68 mm off) and must not be used for comparisons.
 - `data/helmet_20s_raw.fif` (IPG on the bucket inside the helmet) is dominated by a 1.4 cm² current loop below the
   front rim; `data/chest_20s_raw.fif` (4 mA) and `data/chest_12s_new_raw.fif` (7.5 mA, 2a-2b) are clean.
