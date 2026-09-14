@@ -110,6 +110,7 @@ def main():
     ap.add_argument('--i-sim', type=float, default=2.17e-3, help='current between the contacts in the Ansys solve at 1 V (A). Default 2.17 mA = Maxwell surface integral of J.n over the 1 V face of the r0 model')
     ap.add_argument('--family', action='store_true', help='the exports are true rotations of the lead (angle parsed from the file name, e.g. r45_...): compare each recording with every export, refine each with a small numerical roll of +/- --window deg, report the best export and the refined absolute angle')
     ap.add_argument('--window', type=float, default=15.0, help='family mode: numerical roll refinement half-width (deg)')
+    ap.add_argument('--method', choices=['harmonic', 'scan'], default='harmonic', help='harmonic: angle from the cos/sin components of the model with the roll-invariant part free (default); scan: best whole-map correlation over roll')
     ap.add_argument('--map', choices=['template', 'peak'], default='template', help='per-channel amplitude: projection on the common waveform (default) or signed peak (Yalaz)')
     ap.add_argument('--chunk', type=float, default=10.0, help='chunk length (s) for the drift-tolerant average')
     ap.add_argument('--out', default='analysis/results')
@@ -159,6 +160,26 @@ def main():
             corr = pearson if a.stat == 'pearson' else cosine
             other = rolls[int(np.argmax(cosine if a.stat == 'pearson' else pearson))]
             ib = int(np.argmax(corr)); best = rolls[ib]
+            # --- harmonic method: model(theta) = M0 + Mc cos(theta) + Ms sin(theta) + ...; fit the measured map with free
+            #     coefficients for the roll-invariant part M0 (absorbs its model error) and the rotating part; theta = atan2(c, b)
+            if a.method == 'harmonic' and not a.family:
+                th_r = np.radians(rolls)
+                M0 = maps.mean(0); Mc = 2 * np.mean(maps * np.cos(th_r)[:, None], 0); Ms = 2 * np.mean(maps * np.sin(th_r)[:, None], 0)
+                M2c = 2 * np.mean(maps * np.cos(2 * th_r)[:, None], 0); M2s = 2 * np.mean(maps * np.sin(2 * th_r)[:, None], 0)
+                Wd = np.diag(wgt)
+                A = np.column_stack([M0, Mc, Ms, np.ones_like(M0)])
+                coef, *_ = np.linalg.lstsq(Wd @ A, wgt * b, rcond=None)
+                theta = np.degrees(np.arctan2(coef[2], coef[1])) % 360
+                fit = A @ coef; r2 = 1 - np.sum((wgt * (b - fit)) ** 2) / np.sum((wgt * (b - np.average(b, weights=wgt ** 2))) ** 2)
+                rot_power = np.sum((wgt * (coef[1] * Mc + coef[2] * Ms)) ** 2) / np.sum((wgt * fit) ** 2)
+                # uncertainty from the linear fit covariance (noise-limited), propagated to the angle
+                Aw = A / sigma[:, None]; cov = np.linalg.inv(Aw.T @ Aw)            # covariance of the coefficients given the per-channel noise
+                Jt = np.array([0, -coef[2], coef[1], 0]) / (coef[1] ** 2 + coef[2] ** 2)
+                sig_h = np.degrees(np.sqrt(Jt @ cov @ Jt))
+                second = np.sum(M2c ** 2 + M2s ** 2) / np.sum(Mc ** 2 + Ms ** 2)
+                print(f'  harmonic fit: theta = {theta:.1f} deg, noise-limited sigma {sig_h:.2f} deg, fit R2 {r2:.3f}, rotating part = {rot_power * 100:.0f}% of the fitted power, '
+                      f'invariant-part amplitude ratio {coef[0]:.2f}, rotating-part amplitude {np.hypot(coef[1], coef[2]):.2f}, 2nd-harmonic/1st power in the model {second:.2f}')
+                best = theta
             # refine with a parabola through the three points around the maximum
             if 0 < ib < len(rolls) - 1:
                 y0, y1, y2 = corr[ib - 1], corr[ib], corr[ib + 1]; best = rolls[ib] + a.roll_step * 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2)
