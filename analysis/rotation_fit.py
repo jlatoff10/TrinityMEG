@@ -140,7 +140,7 @@ def main():
             print(f'[{os.path.basename(fif)}] {ex["n_chunks"]} chunks of {min(a.chunk, dur / 4):.0f} s: f0 {ex["chunk_f0"].min():.4f}..{ex["chunk_f0"].max():.4f} Hz '
                   f'(spread {np.ptp(ex["chunk_f0"]) * 1e3:.1f} mHz = {np.ptp(ex["chunk_f0"]) / f0 * 1e6:.0f} ppm), phase shifts up to {np.abs(ex["chunk_shift_ms"]).max():.2f} ms; '
                   f'common waveform explains {ex["template_var_fraction"] * 100:.0f}% of the magnetometer variance')
-            sens = sensors_head(info)
+            sens = sensors_head(info); loc_dev = np.array([ch['loc'][:3] for ch in info['chs']]); loc_nrm = np.array([ch['loc'][9:12] for ch in info['chs']])
             chans = list(sens['mag']) + (list(sens['grad']) if a.grads else [])
             chans = [c for c in chans if raw.ch_names[c] not in a.exclude]
             b = (ex['amp'] if a.map == 'template' else pk)[chans]
@@ -201,7 +201,8 @@ def main():
             rows.append(dict(fif=fif, ansys=npz, nominal_deg=nominal, absolute_deg=absolute, f0=f0, duration_s=dur, best_roll_deg=best, gof=corr[ib], pearson_r=pear, amp_ratio=amp,
                              sigma_now_deg=sig_theta, sigma_full_deg=sig_full, residual_over_noise=chi))
             np.savez(os.path.join(a.out, tag + '.npz'), rolls=rolls, corr=corr, measured=b, model=amp * mb, sigma=sigma,
-                     chans=np.array(raw.ch_names)[chans], best_roll=best)
+                     chans=np.array(raw.ch_names)[chans], best_roll=best, chunk_amps=ex['chunk_amps'][:, chans], chunk_starts_s=ex['chunk_starts_s'],
+                     chunk_f0=ex['chunk_f0'], chunk_shift_ms=ex['chunk_shift_ms'], pos_dev=sens['pos_dev'][chans] if 'pos_dev' in sens else loc_dev[chans], nrm_dev=loc_nrm[chans])
             try:
                 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
                 fig, ax = plt.subplots(figsize=(5, 3.4)); ax.plot(rolls, corr, color='#1f5fa8', lw=2); ax.axvline(best, color='0.5', ls='--')

@@ -75,7 +75,7 @@ def period_average(raw, f_nominal=130.0, f_lp=None, chunk_s=10.0, return_extras=
     # per-channel noise of the amplitude from the scatter between chunk averages (standard error of the mean)
     amps_c = np.array([_synth(C, f0, tau) @ templ for C in Cs])
     noise = amps_c.std(0, ddof=1) / np.sqrt(len(Cs)) if len(Cs) > 1 else np.full(len(amp), np.nan)
-    extras = dict(amp=amp, noise=noise, template=templ, chunk_f0=np.array(f0s), chunk_shift_ms=np.array(shifts) * 1e3,
+    extras = dict(amp=amp, noise=noise, template=templ, chunk_amps=amps_c, chunk_f0=np.array(f0s), chunk_shift_ms=np.array(shifts) * 1e3,
                   chunk_starts_s=np.array([t[s] for s in starts]), n_chunks=len(Cs), template_var_fraction=s[0] ** 2 / np.sum(s ** 2))
     return (f0, tau, W, pk, extras) if return_extras else (f0, tau, W, pk)
 
