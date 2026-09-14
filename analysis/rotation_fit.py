@@ -127,9 +127,9 @@ def main():
     for npz in a.ansys:
         G, Q, contacts, Qnet, I_sim = load_ansys(npz)
         tip_ans = contacts if place_by_tip else None      # tip offset (<4 mm along the shaft) is irrelevant for the roll
+        if a.i_sim: I_sim = a.i_sim
         print(f'[{os.path.basename(npz)}] contacts at {np.round(contacts * 1e3, 1)} mm (Ansys), I_sim = {I_sim * 1e3:.2f} mA at 1 V, '
               f'net dipole dir {np.round(Qnet / np.linalg.norm(Qnet), 2)}')
-        if a.i_sim: I_sim = a.i_sim
         scale = a.current / I_sim
         nominal = float(re.search(r'r(\d+)', os.path.basename(npz)).group(1)) if a.family and re.search(r'r(\d+)', os.path.basename(npz)) else 0.0
         for fif in a.fif:
@@ -137,7 +137,7 @@ def main():
             dur = raw.times[-1]
             f0, tau, W, pk, ex = period_average(raw, a.f0, chunk_s=min(a.chunk, dur / 4), return_extras=True)
             print(f'[{os.path.basename(fif)}] {ex["n_chunks"]} chunks of {min(a.chunk, dur / 4):.0f} s: f0 {ex["chunk_f0"].min():.4f}..{ex["chunk_f0"].max():.4f} Hz '
-                  f'(spread {ex["chunk_f0"].ptp() * 1e3:.1f} mHz = {ex["chunk_f0"].ptp() / f0 * 1e6:.0f} ppm), phase shifts up to {np.abs(ex["chunk_shift_ms"]).max():.2f} ms; '
+                  f'(spread {np.ptp(ex["chunk_f0"]) * 1e3:.1f} mHz = {np.ptp(ex["chunk_f0"]) / f0 * 1e6:.0f} ppm), phase shifts up to {np.abs(ex["chunk_shift_ms"]).max():.2f} ms; '
                   f'common waveform explains {ex["template_var_fraction"] * 100:.0f}% of the magnetometer variance')
             sens = sensors_head(info)
             chans = list(sens['mag']) + (list(sens['grad']) if a.grads else [])

@@ -89,7 +89,7 @@ if __name__ == '__main__':
              mags=mne.pick_types(raw.info, meg='mag'), grads=mne.pick_types(raw.info, meg='grad'),
              pos_dev=loc[:, :3], nrm_dev=loc[:, 9:12], dev_head_t=T, chunk_f0=ex['chunk_f0'], chunk_shift_ms=ex['chunk_shift_ms'])
     m = mne.pick_types(raw.info, meg='mag')
-    print(f'f0 = {f0:.4f} Hz over {ex["n_chunks"]} chunks; per-chunk f0 spread {ex["chunk_f0"].ptp() * 1e3:.1f} mHz, '
+    print(f'f0 = {f0:.4f} Hz over {ex["n_chunks"]} chunks; per-chunk f0 spread {np.ptp(ex["chunk_f0"]) * 1e3:.1f} mHz, '
           f'phase shifts {np.round(ex["chunk_shift_ms"], 3)} ms')
     print(f'template explains {ex["template_var_fraction"] * 100:.0f}% of the magnetometer waveform variance; '
           f'signed peaks {pk[m].min():.2e}..{pk[m].max():.2e} T, projected amplitudes {ex["amp"][m].min():.2e}..{ex["amp"][m].max():.2e} T, '
