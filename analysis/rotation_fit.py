@@ -107,7 +107,7 @@ def main():
     ap.add_argument('--weighted', action='store_true', help='whiten channels by their split-half noise before the fit')
     ap.add_argument('--stat', choices=['pearson', 'cosine'], default='pearson', help='pearson: mean removed (robust to a uniform offset); cosine: Yalaz-style, no mean removal')
     ap.add_argument('--full-duration', type=float, default=180.0, help='seconds, for the SNR extrapolation')
-    ap.add_argument('--i-sim', type=float, help='current between the contacts in the Ansys solve (A, from the Maxwell terminal); overrides the estimate')
+    ap.add_argument('--i-sim', type=float, default=2.17e-3, help='current between the contacts in the Ansys solve at 1 V (A). Default 2.17 mA = Maxwell surface integral of J.n over the 1 V face of the r0 model')
     ap.add_argument('--family', action='store_true', help='the exports are true rotations of the lead (angle parsed from the file name, e.g. r45_...): compare each recording with every export, refine each with a small numerical roll of +/- --window deg, report the best export and the refined absolute angle')
     ap.add_argument('--window', type=float, default=15.0, help='family mode: numerical roll refinement half-width (deg)')
     ap.add_argument('--out', default='analysis/results')
