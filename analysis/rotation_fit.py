@@ -197,12 +197,24 @@ def main():
             rr = sorted([r for r in rows if r['fif'] == fif], key=lambda r: -r['gof'])
             print(f"{os.path.basename(fif)}: best {os.path.basename(rr[0]['ansys'])} (gof {rr[0]['gof']:.3f}) -> angle {rr[0]['absolute_deg']:.1f} deg; "
                   + 'ranking: ' + ', '.join(f"r{r['nominal_deg']:.0f}:{r['gof']:.3f}" for r in rr))
+    def set_angle(fif):
+        m = re.search(r'_r(\d+)_', os.path.basename(fif)); return float(m.group(1)) if m else float('nan')
     with open(os.path.join(a.out, 'rotation_results.csv'), 'w', newline='') as fh:
-        w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()) + ['relative_to_first_deg']); w.writeheader()
+        w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()) + ['relative_to_first_deg', 'set_angle_deg', 'set_relative_to_first_deg', 'error_deg']); w.writeheader()
         for npz in a.ansys:
             rr = [r for r in rows if r['ansys'] == npz]
             for r in rr:
-                r['relative_to_first_deg'] = (r['best_roll_deg'] - rr[0]['best_roll_deg'] + 180) % 360 - 180; w.writerow(r)
+                r['relative_to_first_deg'] = (r['best_roll_deg'] - rr[0]['best_roll_deg'] + 180) % 360 - 180
+                r['set_angle_deg'] = set_angle(r['fif']); r['set_relative_to_first_deg'] = set_angle(r['fif']) - set_angle(rr[0]['fif'])
+                # measured relative rotation vs the set one, checked for either rotation sense (the sign convention is not calibrated)
+                e_plus = (r['relative_to_first_deg'] - r['set_relative_to_first_deg'] + 180) % 360 - 180
+                e_minus = (r['relative_to_first_deg'] + r['set_relative_to_first_deg'] + 180) % 360 - 180
+                r['error_deg'] = e_plus if abs(e_plus) <= abs(e_minus) else e_minus
+                w.writerow(r)
+        print('summary (set angle -> measured rotation relative to the first file):')
+        for npz in a.ansys:
+            for r in [x for x in rows if x['ansys'] == npz]:
+                print(f"  {os.path.basename(r['fif'])}: set {r['set_angle_deg']:.0f} deg, measured relative {r['relative_to_first_deg']:+.1f} deg, error {r['error_deg']:+.1f} deg, corr {r['gof']:.3f}")
     print('written', os.path.join(a.out, 'rotation_results.csv'))
 
 
