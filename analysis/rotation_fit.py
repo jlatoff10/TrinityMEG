@@ -110,6 +110,8 @@ def main():
     ap.add_argument('--i-sim', type=float, default=2.17e-3, help='current between the contacts in the Ansys solve at 1 V (A). Default 2.17 mA = Maxwell surface integral of J.n over the 1 V face of the r0 model')
     ap.add_argument('--family', action='store_true', help='the exports are true rotations of the lead (angle parsed from the file name, e.g. r45_...): compare each recording with every export, refine each with a small numerical roll of +/- --window deg, report the best export and the refined absolute angle')
     ap.add_argument('--window', type=float, default=15.0, help='family mode: numerical roll refinement half-width (deg)')
+    ap.add_argument('--map', choices=['template', 'peak'], default='template', help='per-channel amplitude: projection on the common waveform (default) or signed peak (Yalaz)')
+    ap.add_argument('--chunk', type=float, default=10.0, help='chunk length (s) for the drift-tolerant average')
     ap.add_argument('--out', default='analysis/results')
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     tip_head = np.array(a.tip)
@@ -132,22 +134,17 @@ def main():
         nominal = float(re.search(r'r(\d+)', os.path.basename(npz)).group(1)) if a.family and re.search(r'r(\d+)', os.path.basename(npz)) else 0.0
         for fif in a.fif:
             raw = mne.io.read_raw_fif(fif, preload=False); info = raw.info
-            f0, tau, W, pk = period_average(raw, a.f0)
+            dur = raw.times[-1]
+            f0, tau, W, pk, ex = period_average(raw, a.f0, chunk_s=min(a.chunk, dur / 4), return_extras=True)
+            print(f'[{os.path.basename(fif)}] {ex["n_chunks"]} chunks of {min(a.chunk, dur / 4):.0f} s: f0 {ex["chunk_f0"].min():.4f}..{ex["chunk_f0"].max():.4f} Hz '
+                  f'(spread {ex["chunk_f0"].ptp() * 1e3:.1f} mHz = {ex["chunk_f0"].ptp() / f0 * 1e6:.0f} ppm), phase shifts up to {np.abs(ex["chunk_shift_ms"]).max():.2f} ms; '
+                  f'common waveform explains {ex["template_var_fraction"] * 100:.0f}% of the magnetometer variance')
             sens = sensors_head(info)
             chans = list(sens['mag']) + (list(sens['grad']) if a.grads else [])
             chans = [c for c in chans if raw.ch_names[c] not in a.exclude]
-            b = pk[chans]
-            # split-half noise of the averaged map (same synthesis on each half)
-            rawf = raw.copy().load_data().filter(60, None, method='iir', iir_params=dict(order=6, ftype='butter'))
-            X = rawf.get_data()[chans]; tt = rawf.times; K = int(info['lowpass'] // f0); h = len(tt) // 2
-            def synth(sl):
-                Wh = np.zeros((len(chans), len(tau)))
-                for k in range(1, K + 1):
-                    c = (X[:, sl] * np.exp(-2j * np.pi * k * f0 * tt[sl])).mean(1)
-                    Wh += 2 * np.real(c[:, None] * np.exp(2j * np.pi * k * f0 * tau)[None, :])
-                return Wh
-            dif = (synth(slice(0, h)) - synth(slice(h, None))) / 2
-            sigma = np.sqrt((dif ** 2).mean(1))                  # per-channel noise of the averaged map at this duration
+            b = (ex['amp'] if a.map == 'template' else pk)[chans]
+            sigma = ex['noise'][chans]                             # per-channel standard error from the chunk scatter
+            if np.any(~np.isfinite(sigma)): sigma = np.full(len(chans), np.nanmedian(sigma) if np.any(np.isfinite(sigma)) else np.abs(b).max() * 0.01)
             if place_by_tip:
                 th = tip_head
             else:
@@ -173,7 +170,7 @@ def main():
                   - forward(G, Q, sens, chans, roll_matrix(R_ah, shaft_head, best - dth), tip_ans, th, scale)) / (2 * dth) * amp
             u = mb * amp / sigma; v = dm / sigma; v -= u * np.dot(v, u) / np.dot(u, u)
             sig_theta = 1 / np.linalg.norm(v)                     # degrees, at this recording's duration
-            dur = raw.times[-1]; sig_full = sig_theta * np.sqrt(dur / a.full_duration)
+            sig_full = sig_theta * np.sqrt(dur / a.full_duration)
             resid = b - amp * mb; chi = np.sqrt(np.mean((resid / sigma) ** 2)); pear = np.corrcoef(mb, b)[0, 1]
             tag = f'{os.path.splitext(os.path.basename(fif))[0]}_{os.path.splitext(os.path.basename(npz))[0]}'
             absolute = (nominal + best) % 360 if a.family else best
