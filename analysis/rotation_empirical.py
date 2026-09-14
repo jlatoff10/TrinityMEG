@@ -30,8 +30,13 @@ def estimate(coef, m):
     c, *_ = np.linalg.lstsq(X, m, rcond=None)                              # free scale on C absorbs amplitude drift
     return np.degrees(np.arctan2(c[2], c[1])) % 360, c
 
-def main(paths):
+def main(paths, exclude=None):
     recs = load(paths)
+    if exclude is not None:
+        d0 = np.load([p for p in paths if p.endswith('.npz')][0])
+        if 'pos_dev' in d0:
+            keep = np.linalg.norm(d0['pos_dev'] - np.array(exclude[:3]), axis=1) > exclude[3]
+            recs = [(a, m[keep], (s[keep] if s is not None else None), n) for a, m, s, n in recs]; print(f'using {keep.sum()} sensors farther than {exclude[3] * 100:.0f} cm from the excluded point')
     if len(recs) < 4: print('need at least 4 recordings at different set angles'); return
     angles = np.array([r[0] for r in recs]); maps = [r[1] for r in recs]
     print('recordings:', ', '.join(f'r{int(a)}' for a in angles))
@@ -49,4 +54,7 @@ def main(paths):
         print(f'  rms error {np.sqrt(np.mean(np.square(errs))):.1f} deg, max {np.max(np.abs(errs)):.1f} deg')
 
 if __name__ == '__main__':
-    main(sum([glob.glob(p) for p in sys.argv[1:]], []))
+    args = sys.argv[1:]; exclude = None
+    if '--exclude-near' in args:
+        i = args.index('--exclude-near'); exclude = [float(v) for v in args[i + 1:i + 5]]; args = args[:i] + args[i + 5:]
+    main(sum([glob.glob(p) for p in args], []), exclude)

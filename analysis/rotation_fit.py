@@ -113,6 +113,8 @@ def main():
     ap.add_argument('--method', choices=['harmonic', 'scan'], default='harmonic', help='harmonic: angle from the cos/sin components of the model with the roll-invariant part free (default); scan: best whole-map correlation over roll')
     ap.add_argument('--map', choices=['template', 'peak'], default='template', help='per-channel amplitude: projection on the common waveform (default) or signed peak (Yalaz)')
     ap.add_argument('--chunk', type=float, default=10.0, help='chunk length (s) for the drift-tolerant average')
+    ap.add_argument('--exclude-near', nargs=4, type=float, metavar=('X', 'Y', 'Z', 'R'), help='drop sensors within R m of the point (X,Y,Z) in device coordinates, e.g. an artifact at 0.095 -0.04 0.085 with R 0.12')
+    ap.add_argument('--fit-loop', action='store_true', help='fit a current loop (magnetic dipole, free position and moment) jointly with the electrode model to absorb a compact artifact; initialised at --exclude-near point if given')
     ap.add_argument('--out', default='analysis/results')
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     tip_head = np.array(a.tip)
@@ -143,6 +145,8 @@ def main():
             sens = sensors_head(info); loc_dev = np.array([ch['loc'][:3] for ch in info['chs']]); loc_nrm = np.array([ch['loc'][9:12] for ch in info['chs']])
             chans = list(sens['mag']) + (list(sens['grad']) if a.grads else [])
             chans = [c for c in chans if raw.ch_names[c] not in a.exclude]
+            if a.exclude_near:
+                q = np.array(a.exclude_near[:3]); chans = [c for c in chans if np.linalg.norm(loc_dev[c] - q) > a.exclude_near[3]]
             b = (ex['amp'] if a.map == 'template' else pk)[chans]
             sigma = ex['noise'][chans]                             # per-channel standard error from the chunk scatter
             if np.any(~np.isfinite(sigma)): sigma = np.full(len(chans), np.nanmedian(sigma) if np.any(np.isfinite(sigma)) else np.abs(b).max() * 0.01)
@@ -169,8 +173,25 @@ def main():
                 Wd = np.diag(wgt)
                 A = np.column_stack([M0, Mc, Ms, np.ones_like(M0)])
                 coef, *_ = np.linalg.lstsq(Wd @ A, wgt * b, rcond=None)
+                if a.fit_loop:
+                    from scipy.optimize import least_squares as _ls
+                    Pd, Nd = loc_dev[chans], loc_nrm[chans]
+                    def loopf(x):
+                        p = x[:3] * 1e-2; mm = x[3:] * 1e-8; r = Pd - p; rn = np.linalg.norm(r, axis=1)[:, None]
+                        return np.sum(1e-7 * (3 * r * np.sum(r * mm, 1)[:, None] / rn ** 5 - mm / rn ** 3) * Nd, 1)
+                    x0 = np.r_[(np.array(a.exclude_near[:3]) if a.exclude_near else np.array([0.09, -0.04, 0.08])) * 1e2, 1, 0, 0]
+                    bl = np.zeros_like(b); xl = x0
+                    for it in range(6):
+                        coef, *_ = np.linalg.lstsq(Wd @ A, wgt * (b - bl), rcond=None)
+                        resid_lin = b - A @ coef
+                        rr = _ls(lambda x: (loopf(x) - resid_lin) * wgt / np.abs(b).max(), xl, method='lm', max_nfev=2000); xl = rr.x; bl = loopf(xl)
+                    print(f'  loop fitted at device {np.round(xl[:3] * 10, 0)} mm, |m| {np.linalg.norm(xl[3:]) * 1e-8:.1e} A.m2, loop peak {np.abs(bl).max() * 1e12:.1f} pT; '
+                          f'residual power after loop+model {np.sum((b - A @ coef - bl) ** 2) / np.sum(b ** 2) * 100:.0f}% (model alone {np.sum((b - A @ np.linalg.lstsq(Wd @ A, wgt * b, rcond=None)[0]) ** 2) / np.sum(b ** 2) * 100:.0f}%)')
+                    b_fit = b - bl
+                else:
+                    b_fit = b
                 theta = np.degrees(np.arctan2(coef[2], coef[1])) % 360
-                fit = A @ coef; r2 = 1 - np.sum((wgt * (b - fit)) ** 2) / np.sum((wgt * (b - np.average(b, weights=wgt ** 2))) ** 2)
+                fit = A @ coef; r2 = 1 - np.sum((wgt * (b_fit - fit)) ** 2) / np.sum((wgt * (b_fit - np.average(b_fit, weights=wgt ** 2))) ** 2)
                 rot_power = np.sum((wgt * (coef[1] * Mc + coef[2] * Ms)) ** 2) / np.sum((wgt * fit) ** 2)
                 # uncertainty from the linear fit covariance (noise-limited), propagated to the angle
                 Aw = A / sigma[:, None]; cov = np.linalg.inv(Aw.T @ Aw)            # covariance of the coefficients given the per-channel noise
@@ -202,7 +223,7 @@ def main():
                              sigma_now_deg=sig_theta, sigma_full_deg=sig_full, residual_over_noise=chi))
             np.savez(os.path.join(a.out, tag + '.npz'), rolls=rolls, corr=corr, measured=b, model=amp * mb, sigma=sigma,
                      chans=np.array(raw.ch_names)[chans], best_roll=best, chunk_amps=ex['chunk_amps'][:, chans], chunk_starts_s=ex['chunk_starts_s'],
-                     chunk_f0=ex['chunk_f0'], chunk_shift_ms=ex['chunk_shift_ms'], pos_dev=sens['pos_dev'][chans] if 'pos_dev' in sens else loc_dev[chans], nrm_dev=loc_nrm[chans])
+                     chunk_f0=ex['chunk_f0'], chunk_shift_ms=ex['chunk_shift_ms'], dev_head_t=info['dev_head_t']['trans'], pos_dev=sens['pos_dev'][chans] if 'pos_dev' in sens else loc_dev[chans], nrm_dev=loc_nrm[chans])
             try:
                 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
                 fig, ax = plt.subplots(figsize=(5, 3.4)); ax.plot(rolls, corr, color='#1f5fa8', lw=2); ax.axvline(best, color='0.5', ls='--')
