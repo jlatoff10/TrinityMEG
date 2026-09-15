@@ -164,6 +164,9 @@ def main():
             corr = pearson if a.stat == 'pearson' else cosine
             other = rolls[int(np.argmax(cosine if a.stat == 'pearson' else pearson))]
             ib = int(np.argmax(corr)); best = rolls[ib]
+            # refine with a parabola through the three points around the maximum
+            if 0 < ib < len(rolls) - 1:
+                y0, y1, y2 = corr[ib - 1], corr[ib], corr[ib + 1]; best = rolls[ib] + a.roll_step * 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2)
             # --- harmonic method: model(theta) = M0 + Mc cos(theta) + Ms sin(theta) + ...; fit the measured map with free
             #     coefficients for the roll-invariant part M0 (absorbs its model error) and the rotating part; theta = atan2(c, b)
             if a.method == 'harmonic' and not a.family:
@@ -201,9 +204,6 @@ def main():
                 print(f'  harmonic fit: theta = {theta:.1f} deg, noise-limited sigma {sig_h:.2f} deg, fit R2 {r2:.3f}, rotating part = {rot_power * 100:.0f}% of the fitted power, '
                       f'invariant-part amplitude ratio {coef[0]:.2f}, rotating-part amplitude {np.hypot(coef[1], coef[2]):.2f}, 2nd-harmonic/1st power in the model {second:.2f}')
                 best = theta
-            # refine with a parabola through the three points around the maximum
-            if 0 < ib < len(rolls) - 1:
-                y0, y1, y2 = corr[ib - 1], corr[ib], corr[ib + 1]; best = rolls[ib] + a.roll_step * 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2)
             mb = forward(G, Q, sens, chans, roll_matrix(R_ah, shaft_head, best), tip_ans, th, scale)
             amp = np.dot(mb * wgt, bw) / np.dot(mb * wgt, mb * wgt)
             # noise-limited uncertainty: sigma_theta = 1 / ||d(amp*model)/dtheta / sigma||, amplitude direction projected out
